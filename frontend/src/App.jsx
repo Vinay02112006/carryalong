@@ -9,7 +9,9 @@ import Dashboard from './pages/Dashboard';
 import Parcels from './pages/Parcels';
 import SendParcel from './pages/SendParcel';
 import ParcelDetails from './pages/ParcelDetails';
+import Travel from './pages/Travel';
 import PostTravel from './pages/PostTravel';
+import Messages from './pages/Messages';
 import Profile from './pages/Profile';
 
 function App() {
@@ -69,10 +71,26 @@ function App() {
         }
       />
       <Route
+        path="/travel"
+        element={
+          <ProtectedRoute>
+            <Travel />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/travel/post"
         element={
           <ProtectedRoute>
             <PostTravel />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/messages"
+        element={
+          <ProtectedRoute>
+            <Messages />
           </ProtectedRoute>
         }
       />
