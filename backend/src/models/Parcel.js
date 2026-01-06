@@ -36,6 +36,14 @@ const parcelSchema = new mongoose.Schema({
     min: [1, 'Reward must be at least ₹1'],
     max: [10000, 'Reward cannot exceed ₹10,000']
   },
+  pickupCoordinates: {
+    lat: Number,
+    lng: Number
+  },
+  dropCoordinates: {
+    lat: Number,
+    lng: Number
+  },
   parcelImage: {
     type: String,
     default: 'https://via.placeholder.com/300x200?text=Parcel+Image'

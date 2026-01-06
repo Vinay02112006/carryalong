@@ -16,9 +16,9 @@ const router = express.Router();
 // All routes are protected
 router.route('/')
   .post(protect, createTravel)
-  .get(protect, getAllTravels);
+  .get(getAllTravels);
 
-router.get('/search', protect, searchTravels);
+router.get('/search', searchTravels);
 router.get('/my/posts', protect, getMyTravels);
 
 router.route('/:id')

@@ -12,7 +12,7 @@ export const sendMessage = async (req, res, next) => {
 
     // Verify parcel exists and user is involved
     const parcel = await Parcel.findById(parcelId);
-    
+
     if (!parcel) {
       res.status(404);
       throw new Error('Parcel not found');
@@ -38,6 +38,9 @@ export const sendMessage = async (req, res, next) => {
       .populate('sender', 'name')
       .populate('receiver', 'name');
 
+    // Emit socket event
+    req.io.to(parcelId).emit('new_message', populatedMessage);
+
     res.status(201).json(populatedMessage);
   } catch (error) {
     next(error);
@@ -55,7 +58,7 @@ export const getMessagesByParcel = async (req, res, next) => {
 
     // Verify user is involved in this parcel
     const parcel = await Parcel.findById(parcelId);
-    
+
     if (!parcel) {
       res.status(404);
       throw new Error('Parcel not found');
@@ -100,7 +103,7 @@ export const getConversations = async (req, res, next) => {
 
     // Group by parcel
     const conversationsMap = new Map();
-    
+
     messages.forEach(msg => {
       const parcelId = msg.parcel._id.toString();
       if (!conversationsMap.has(parcelId)) {
@@ -110,7 +113,7 @@ export const getConversations = async (req, res, next) => {
           unreadCount: 0
         });
       }
-      
+
       // Count unread messages
       if (msg.receiver._id.toString() === req.user._id.toString() && !msg.isRead) {
         conversationsMap.get(parcelId).unreadCount++;

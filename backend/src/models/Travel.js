@@ -24,6 +24,14 @@ const travelSchema = new mongoose.Schema({
     type: Date,
     required: [true, 'Please provide travel date']
   },
+  fromCoordinates: {
+    lat: Number,
+    lng: Number
+  },
+  toCoordinates: {
+    lat: Number,
+    lng: Number
+  },
   time: {
     type: String,
     required: [true, 'Please provide travel time']

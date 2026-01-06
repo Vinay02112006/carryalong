@@ -4,8 +4,10 @@ import { Plane, MapPin, Calendar, DollarSign, Package, Plus } from 'lucide-react
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
 import axiosInstance from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 
 const Travel = () => {
+  const { isAuthenticated } = useAuth();
   const [travels, setTravels] = useState([]);
   const [myTravels, setMyTravels] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -13,17 +15,23 @@ const Travel = () => {
 
   useEffect(() => {
     fetchTravels();
-  }, []);
+  }, [isAuthenticated]);
 
   const fetchTravels = async () => {
     try {
       setLoading(true);
-      const [allResponse, myResponse] = await Promise.all([
-        axiosInstance.get('/travel'),
-        axiosInstance.get('/travel/my')
-      ]);
-      setTravels(allResponse.data);
-      setMyTravels(myResponse.data);
+      const promises = [axiosInstance.get('/travel')];
+
+      if (isAuthenticated) {
+        promises.push(axiosInstance.get('/travel/my'));
+      }
+
+      const results = await Promise.all(promises);
+      setTravels(results[0].data);
+
+      if (isAuthenticated && results[1]) {
+        setMyTravels(results[1].data);
+      }
     } catch (error) {
       console.error('Error fetching travels:', error);
     } finally {
@@ -84,11 +92,10 @@ const Travel = () => {
       )}
 
       <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
-        <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-          travel.status === 'active' 
-            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-            : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-        }`}>
+        <span className={`px-3 py-1 text-xs font-medium rounded-full ${travel.status === 'active'
+          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+          }`}>
           {travel.status}
         </span>
         <Link
@@ -118,7 +125,7 @@ const Travel = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
       <Header />
-      
+
       <div className="max-w-4xl mx-auto px-4 py-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -126,7 +133,7 @@ const Travel = () => {
             Travel Routes
           </h1>
           <Link
-            to="/travel/post"
+            to={isAuthenticated ? "/travel/post" : "/login"}
             className="flex items-center space-x-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
           >
             <Plus size={20} />
@@ -138,24 +145,24 @@ const Travel = () => {
         <div className="flex space-x-4 mb-6 border-b border-gray-200 dark:border-gray-700">
           <button
             onClick={() => setActiveTab('all')}
-            className={`pb-3 px-2 font-medium transition-colors ${
-              activeTab === 'all'
-                ? 'text-primary-600 dark:text-primary-400 border-b-2 border-primary-600 dark:border-primary-400'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
+            className={`pb-3 px-2 font-medium transition-colors ${activeTab === 'all'
+              ? 'text-primary-600 dark:text-primary-400 border-b-2 border-primary-600 dark:border-primary-400'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
           >
             All Travels ({travels.length})
           </button>
-          <button
-            onClick={() => setActiveTab('my')}
-            className={`pb-3 px-2 font-medium transition-colors ${
-              activeTab === 'my'
+          {isAuthenticated && (
+            <button
+              onClick={() => setActiveTab('my')}
+              className={`pb-3 px-2 font-medium transition-colors ${activeTab === 'my'
                 ? 'text-primary-600 dark:text-primary-400 border-b-2 border-primary-600 dark:border-primary-400'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-            }`}
-          >
-            My Travels ({myTravels.length})
-          </button>
+                }`}
+            >
+              My Travels ({myTravels.length})
+            </button>
+          )}
         </div>
 
         {/* Travel List */}
@@ -166,8 +173,8 @@ const Travel = () => {
               No travels found
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              {activeTab === 'my' 
-                ? "You haven't posted any travel routes yet." 
+              {activeTab === 'my'
+                ? "You haven't posted any travel routes yet."
                 : "No available travel routes at the moment."}
             </p>
             {activeTab === 'my' && (
@@ -183,9 +190,9 @@ const Travel = () => {
         ) : (
           <div>
             {displayTravels.map((travel) => (
-              <TravelCard 
-                key={travel._id} 
-                travel={travel} 
+              <TravelCard
+                key={travel._id}
+                travel={travel}
                 isMine={activeTab === 'my'}
               />
             ))}

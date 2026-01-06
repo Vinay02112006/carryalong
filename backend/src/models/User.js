@@ -53,13 +53,28 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['user', 'admin'],
     default: 'user'
+  },
+  kycStatus: {
+    type: String,
+    enum: ['none', 'pending', 'verified', 'rejected'],
+    default: 'none'
+  },
+  kycDocument: {
+    type: String
+  },
+  termsAccepted: {
+    type: Boolean,
+    default: false
+  },
+  termsAcceptedAt: {
+    type: Date
   }
 }, {
   timestamps: true
 });
 
 // Hash password before saving
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
     next();
   }
@@ -68,7 +83,7 @@ userSchema.pre('save', async function(next) {
 });
 
 // Compare entered password with hashed password
-userSchema.methods.matchPassword = async function(enteredPassword) {
+userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 

@@ -3,9 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { Package } from 'lucide-react';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
+import TermsModal from '../components/TermsModal';
+import { useAuth } from '../context/AuthContext';
 import axiosInstance from '../api/axios';
+import MapComponent from '../components/MapComponent';
+import { geocodeCity } from '../utils/geocoding';
 
 const SendParcel = () => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     pickupCity: '',
     dropCity: '',
@@ -13,14 +18,35 @@ const SendParcel = () => {
     parcelDescription: '',
     rewardAmount: '',
     parcelImage: '',
+    pickupCoordinates: null,
+    dropCoordinates: null
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
   const navigate = useNavigate();
+
+  const handleCityBlur = async (field, value) => {
+    if (!value) return;
+    const coords = await geocodeCity(value);
+    if (coords) {
+      if (field === 'pickupCity') {
+        setFormData(prev => ({ ...prev, pickupCoordinates: coords }));
+      } else {
+        setFormData(prev => ({ ...prev, dropCoordinates: coords }));
+      }
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    // Check if user has accepted terms
+    if (!user?.termsAccepted) {
+      setShowTerms(true);
+      return;
+    }
 
     if (formData.rewardAmount > 10000) {
       setError('Maximum reward amount is ₹10,000');
@@ -37,6 +63,11 @@ const SendParcel = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTermsAccepted = () => {
+    setShowTerms(false);
+    window.location.reload(); // Refresh to update user context
   };
 
   return (
@@ -61,6 +92,11 @@ const SendParcel = () => {
             </div>
           )}
 
+          <MapComponent
+            pickup={formData.pickupCoordinates}
+            drop={formData.dropCoordinates}
+          />
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2">Pickup City *</label>
@@ -71,6 +107,7 @@ const SendParcel = () => {
                 placeholder="Mumbai"
                 value={formData.pickupCity}
                 onChange={(e) => setFormData({ ...formData, pickupCity: e.target.value })}
+                onBlur={(e) => handleCityBlur('pickupCity', e.target.value)}
               />
             </div>
 
@@ -83,6 +120,7 @@ const SendParcel = () => {
                 placeholder="Delhi"
                 value={formData.dropCity}
                 onChange={(e) => setFormData({ ...formData, dropCity: e.target.value })}
+                onBlur={(e) => handleCityBlur('dropCity', e.target.value)}
               />
             </div>
           </div>
@@ -156,6 +194,13 @@ const SendParcel = () => {
           </div>
         </form>
       </div>
+
+      {showTerms && (
+        <TermsModal
+          onClose={() => setShowTerms(false)}
+          onAccept={handleTermsAccepted}
+        />
+      )}
 
       <BottomNav />
     </div>

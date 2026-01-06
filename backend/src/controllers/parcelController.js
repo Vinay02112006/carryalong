@@ -10,7 +10,7 @@ import User from '../models/User.js';
  */
 export const createParcel = async (req, res, next) => {
   try {
-    const { pickupCity, dropCity, parcelSize, parcelDescription, rewardAmount, parcelImage } = req.body;
+    const { pickupCity, dropCity, parcelSize, parcelDescription, rewardAmount, parcelImage, pickupCoordinates, dropCoordinates } = req.body;
 
     const parcel = await Parcel.create({
       sender: req.user._id,
@@ -19,7 +19,9 @@ export const createParcel = async (req, res, next) => {
       parcelSize,
       parcelDescription,
       rewardAmount,
-      parcelImage
+      parcelImage,
+      pickupCoordinates,
+      dropCoordinates
     });
 
     const populatedParcel = await Parcel.findById(parcel._id).populate('sender', 'name phone rating');
@@ -57,11 +59,11 @@ export const searchParcels = async (req, res, next) => {
     const { from, to, status } = req.query;
 
     const query = {};
-    
+
     if (from) {
       query.pickupCity = { $regex: from, $options: 'i' };
     }
-    
+
     if (to) {
       query.dropCity = { $regex: to, $options: 'i' };
     }
@@ -130,7 +132,7 @@ export const getMySentParcels = async (req, res, next) => {
  */
 export const getMyCarryingParcels = async (req, res, next) => {
   try {
-    const parcels = await Parcel.find({ 
+    const parcels = await Parcel.find({
       traveler: req.user._id,
       status: { $in: ['accepted', 'picked_up', 'delivered'] }
     })
@@ -179,7 +181,7 @@ export const acceptParcel = async (req, res, next) => {
     }
 
     // Check if routes match
-    const routeMatch = 
+    const routeMatch =
       parcel.pickupCity.toLowerCase() === travel.fromCity.toLowerCase() &&
       parcel.dropCity.toLowerCase() === travel.toCity.toLowerCase();
 
@@ -263,14 +265,14 @@ export const updateParcelStatus = async (req, res, next) => {
 
     // Update status and timestamp
     parcel.status = status;
-    
+
     if (status === 'picked_up') {
       parcel.pickedUpAt = new Date();
     } else if (status === 'delivered') {
       parcel.deliveredAt = new Date();
     } else if (status === 'completed') {
       parcel.completedAt = new Date();
-      
+
       // Release payment and update traveler earnings
       const payment = await Payment.findOne({ parcel: parcel._id });
       if (payment && payment.status === 'held') {

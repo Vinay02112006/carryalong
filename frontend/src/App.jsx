@@ -72,11 +72,7 @@ function App() {
       />
       <Route
         path="/travel"
-        element={
-          <ProtectedRoute>
-            <Travel />
-          </ProtectedRoute>
-        }
+        element={<Travel />}
       />
       <Route
         path="/travel/post"

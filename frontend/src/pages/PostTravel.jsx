@@ -3,9 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { Plane } from 'lucide-react';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
+import TermsModal from '../components/TermsModal';
+import { useAuth } from '../context/AuthContext';
 import axiosInstance from '../api/axios';
+import MapComponent from '../components/MapComponent';
+import { geocodeCity } from '../utils/geocoding';
 
 const PostTravel = () => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     fromCity: '',
     toCity: '',
@@ -13,14 +18,36 @@ const PostTravel = () => {
     time: '',
     vehicleType: 'car',
     availableSpace: 'small',
+    fromCoordinates: null,
+    toCoordinates: null
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
   const navigate = useNavigate();
+
+  const handleCityBlur = async (field, value) => {
+    if (!value) return;
+    const coords = await geocodeCity(value);
+    if (coords) {
+      if (field === 'fromCity') {
+        setFormData(prev => ({ ...prev, fromCoordinates: coords }));
+      } else {
+        setFormData(prev => ({ ...prev, toCoordinates: coords }));
+      }
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    // Check if user has accepted terms
+    if (!user?.termsAccepted) {
+      setShowTerms(true);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -31,6 +58,11 @@ const PostTravel = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTermsAccepted = () => {
+    setShowTerms(false);
+    window.location.reload(); // Refresh to update user context
   };
 
   return (
@@ -55,6 +87,11 @@ const PostTravel = () => {
             </div>
           )}
 
+          <MapComponent
+            pickup={formData.fromCoordinates}
+            drop={formData.toCoordinates}
+          />
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-2">From City *</label>
@@ -65,6 +102,7 @@ const PostTravel = () => {
                 placeholder="Mumbai"
                 value={formData.fromCity}
                 onChange={(e) => setFormData({ ...formData, fromCity: e.target.value })}
+                onBlur={(e) => handleCityBlur('fromCity', e.target.value)}
               />
             </div>
 
@@ -77,6 +115,7 @@ const PostTravel = () => {
                 placeholder="Delhi"
                 value={formData.toCity}
                 onChange={(e) => setFormData({ ...formData, toCity: e.target.value })}
+                onBlur={(e) => handleCityBlur('toCity', e.target.value)}
               />
             </div>
           </div>
@@ -150,6 +189,13 @@ const PostTravel = () => {
           </div>
         </form>
       </div>
+
+      {showTerms && (
+        <TermsModal
+          onClose={() => setShowTerms(false)}
+          onAccept={handleTermsAccepted}
+        />
+      )}
 
       <BottomNav />
     </div>

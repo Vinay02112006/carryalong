@@ -4,6 +4,7 @@ import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
 import axiosInstance from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import { io } from 'socket.io-client';
 
 const Messages = () => {
   const { user } = useAuth();
@@ -18,6 +19,32 @@ const Messages = () => {
     fetchConversations();
   }, []);
 
+
+
+  useEffect(() => {
+    // Initialize socket connection
+    const socket = io('http://localhost:5000');
+
+    if (selectedConversation && selectedConversation.parcel) {
+      // Join parcel room
+      socket.emit('join_parcel', selectedConversation.parcel._id);
+
+      // Listen for new messages
+      socket.on('new_message', (message) => {
+        // Only append if it belongs to current conversation
+        if (message.parcel === selectedConversation.parcel._id) {
+          setMessages((prev) => [...prev, message]);
+        }
+      });
+    }
+
+    // Cleanup on unmount or conversation change
+    return () => {
+      socket.disconnect();
+    };
+  }, [selectedConversation]);
+
+  // Initial fetch of messages (keep separate to avoid refetching on every socket update)
   useEffect(() => {
     if (selectedConversation) {
       fetchMessages(selectedConversation._id);
@@ -57,7 +84,7 @@ const Messages = () => {
         content: newMessage,
         parcel: selectedConversation.parcel?._id
       });
-      
+
       setMessages([...messages, response.data]);
       setNewMessage('');
     } catch (error) {
@@ -91,7 +118,7 @@ const Messages = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
       <Header />
-      
+
       <div className="max-w-6xl mx-auto px-4 py-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
           Messages
@@ -124,11 +151,10 @@ const Messages = () => {
                   <button
                     key={conv._id}
                     onClick={() => setSelectedConversation(conv)}
-                    className={`w-full p-4 flex items-start space-x-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700 ${
-                      selectedConversation?._id === conv._id 
-                        ? 'bg-primary-50 dark:bg-primary-900/20' 
-                        : ''
-                    }`}
+                    className={`w-full p-4 flex items-start space-x-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-200 dark:border-gray-700 ${selectedConversation?._id === conv._id
+                      ? 'bg-primary-50 dark:bg-primary-900/20'
+                      : ''
+                      }`}
                   >
                     <div className="w-10 h-10 bg-primary-600 rounded-full flex items-center justify-center text-white font-semibold">
                       {conv.otherUser?.name.charAt(0).toUpperCase()}
@@ -190,16 +216,14 @@ const Messages = () => {
                         className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}
                       >
                         <div
-                          className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                            isMine
-                              ? 'bg-primary-600 text-white'
-                              : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'
-                          }`}
+                          className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isMine
+                            ? 'bg-primary-600 text-white'
+                            : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white'
+                            }`}
                         >
                           <p>{message.content}</p>
-                          <p className={`text-xs mt-1 ${
-                            isMine ? 'text-primary-100' : 'text-gray-500 dark:text-gray-400'
-                          }`}>
+                          <p className={`text-xs mt-1 ${isMine ? 'text-primary-100' : 'text-gray-500 dark:text-gray-400'
+                            }`}>
                             {formatTime(message.createdAt)}
                           </p>
                         </div>

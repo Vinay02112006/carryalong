@@ -27,8 +27,11 @@ const paymentSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['held', 'released', 'refunded'],
-    default: 'held'
+    enum: ['pending', 'held', 'released', 'refunded'],
+    default: 'pending'
+  },
+  paymentIntentId: {
+    type: String
   },
   heldAt: {
     type: Date,

@@ -8,7 +8,7 @@ import Parcel from '../models/Parcel.js';
  */
 export const createTravel = async (req, res, next) => {
   try {
-    const { fromCity, toCity, date, time, vehicleType, availableSpace } = req.body;
+    const { fromCity, toCity, date, time, vehicleType, availableSpace, fromCoordinates, toCoordinates } = req.body;
 
     const travel = await Travel.create({
       traveler: req.user._id,
@@ -17,7 +17,9 @@ export const createTravel = async (req, res, next) => {
       date,
       time,
       vehicleType,
-      availableSpace
+      availableSpace,
+      fromCoordinates,
+      toCoordinates
     });
 
     const populatedTravel = await Travel.findById(travel._id).populate('traveler', 'name phone rating');
@@ -55,11 +57,11 @@ export const searchTravels = async (req, res, next) => {
     const { from, to } = req.query;
 
     const query = { status: 'active' };
-    
+
     if (from) {
       query.fromCity = { $regex: from, $options: 'i' };
     }
-    
+
     if (to) {
       query.toCity = { $regex: to, $options: 'i' };
     }

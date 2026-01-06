@@ -6,6 +6,8 @@ import BottomNav from '../components/BottomNav';
 import { useAuth } from '../context/AuthContext';
 import axiosInstance from '../api/axios';
 import { formatCurrency, formatDateTime, getStatusColor, getStatusText } from '../utils/helpers';
+import MapComponent from '../components/MapComponent';
+import PaymentModal from '../components/PaymentModal';
 
 const ParcelDetails = () => {
   const { id } = useParams();
@@ -17,6 +19,8 @@ const ParcelDetails = () => {
   const [showRating, setShowRating] = useState(false);
   const [rating, setRating] = useState(5);
   const [review, setReview] = useState('');
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState('pending'); // held, released
 
   useEffect(() => {
     fetchParcel();
@@ -26,6 +30,15 @@ const ParcelDetails = () => {
     try {
       const { data } = await axiosInstance.get(`/parcels/${id}`);
       setParcel(data);
+
+      // Check payment status
+      try {
+        const paymentRes = await axiosInstance.get(`/payments/parcel/${id}`);
+        setPaymentStatus(paymentRes.data.status);
+      } catch (e) {
+        setPaymentStatus('pending');
+      }
+
     } catch (error) {
       console.error('Error fetching parcel:', error);
     } finally {
@@ -112,7 +125,12 @@ const ParcelDetails = () => {
 
           {/* Route */}
           <div className="mb-6">
-            <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <h3 className="font-semibold mb-3">Journey</h3>
+            <MapComponent
+              pickup={parcel.pickupCoordinates}
+              drop={parcel.dropCoordinates}
+            />
+            <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg mt-3">
               <MapPin className="text-primary-600" size={24} />
               <div className="flex-1">
                 <p className="text-sm text-gray-600 dark:text-gray-400">Route</p>
@@ -222,6 +240,26 @@ const ParcelDetails = () => {
 
           {/* Actions */}
           <div className="flex flex-col gap-3">
+            {/* Payment Warning/Action */}
+            {isSender && parcel.status === 'accepted' && paymentStatus === 'pending' && (
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg mb-4 border border-yellow-200 dark:border-yellow-700">
+                <p className="text-yellow-800 dark:text-yellow-200 mb-2 font-medium">
+                  Traveler accepted! Please confirm by paying the reward amount.
+                </p>
+                <button
+                  onClick={() => setShowPaymentModal(true)}
+                  className="w-full btn-primary bg-yellow-600 hover:bg-yellow-700 border-none"
+                >
+                  Pay ₹{parcel.rewardAmount} to Confirm
+                </button>
+              </div>
+            )}
+
+            {isTraveler && parcel.status === 'accepted' && paymentStatus === 'pending' && (
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg mb-4 text-sm text-yellow-800 dark:text-yellow-200">
+                Waiting for sender to complete payment. Do not start journey yet.
+              </div>
+            )}
             {/* Chat Button */}
             {parcel.traveler && (isSender || isTraveler) && (
               <Link
@@ -237,7 +275,7 @@ const ParcelDetails = () => {
             {isTraveler && parcel.status === 'accepted' && (
               <button
                 onClick={() => handleStatusUpdate('picked_up')}
-                disabled={actionLoading}
+                disabled={actionLoading || paymentStatus === 'pending'}
                 className="btn-primary"
               >
                 Mark as Picked Up
@@ -319,6 +357,15 @@ const ParcelDetails = () => {
           </div>
         </div>
       </div>
+
+      {showPaymentModal && (
+        <PaymentModal
+          parcelId={parcel._id}
+          amount={parcel.rewardAmount}
+          onSuccess={handlePaymentSuccess}
+          onCancel={() => setShowPaymentModal(false)}
+        />
+      )}
 
       <BottomNav />
     </div>
